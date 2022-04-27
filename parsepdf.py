@@ -1,5 +1,4 @@
 # %%
-from os import O_TMPFILE
 import tabula
 import pandas as pd
 import numpy as np
@@ -64,6 +63,9 @@ def getBoardListDF(list_table,court_no,board_type,judges):
     list_tbl['srno']=list_tbl.iloc[:,0].copy()
     list_tbl['srno'].where(list_tbl['srno'].str.isdigit(),np.NaN,inplace=True)
     list_tbl['srno']=list_tbl['srno'].fillna(method='ffill')
+    list_tbl['leave']=list_tbl.iloc[:,0].copy()
+    list_tbl['leave'].where(list_tbl['leave'].apply(lambda x:'On Leave from' in x),'',inplace=True) # make sure list includes all possible status,othewrise wrong status
+
     list_tbl['status']=list_tbl.iloc[:,0].copy()
     list_tbl['status']=list_tbl['status'].fillna('')
     
@@ -78,7 +80,8 @@ def getBoardListDF(list_table,court_no,board_type,judges):
     list_tbl['case_nos_b']=list_tbl['case_nos_b'].fillna(method='ffill')
     list_tbl['case_nos_b'].where(list_tbl['case_nos_b'].apply(lambda x:x.startswith(case_no_pattern)),np.NaN,inplace=True) #remove text which is not case no.
     list_tbl['case_nos_b']=list_tbl['case_nos_b'].fillna(method='ffill') # refill na with current case no
-    list_tbl_f=list_tbl.groupby(['srno','case_nos_b'],as_index=False).agg({'status':'first','REMARKS':'first'})
+    list_tbl_f=list_tbl.groupby(['srno','case_nos_b'],as_index=False).agg({'status':'first','REMARKS':'first','leave':list})
+    list_tbl_f['leave']=list_tbl_f['leave'].apply(lambda x:''.join(x))
     list_tbl_f['REMARKS']=list_tbl_f['REMARKS'].fillna('na')
     list_tbl_f['REMARKS']=list_tbl_f['REMARKS'].apply(lambda x: x.replace('\r',' '))
     list_tbl_f['case_nos_b']=list_tbl_f['case_nos_b'].apply(lambda x:extract_case_no(x))
