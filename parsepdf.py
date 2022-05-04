@@ -69,7 +69,7 @@ def getBoardListDF(list_table,court_no,board_type,judges):
         list_tbl['srno']=list_tbl['srno'].fillna(method='ffill')
         list_tbl['leave']=list_tbl.iloc[:,0].copy()
         list_tbl['leave']=list_tbl['leave'].fillna('')
-        list_tbl['leave'].where(list_tbl['leave'].apply(lambda x:'On Leave from' in x),'',inplace=True) # make sure list includes all possible status,othewrise wrong status
+        list_tbl['leave'].where(list_tbl['leave'].apply(lambda x:'On Leave from' in x),'',inplace=True) 
 
         list_tbl['status']=list_tbl.iloc[:,0].copy()
         list_tbl['status']=list_tbl['status'].fillna('')
@@ -87,6 +87,8 @@ def getBoardListDF(list_table,court_no,board_type,judges):
         list_tbl['case_nos_b']=list_tbl['case_nos_b'].fillna(method='ffill') # refill na with current case no
         list_tbl_f=list_tbl.groupby(['srno','case_nos_b'],as_index=False).agg({'status':'first','REMARKS':'first','leave':list})
         list_tbl_f['leave']=list_tbl_f['leave'].apply(lambda x:''.join(x))
+        list_tbl_f['leave']=list_tbl_f['leave'].apply(lambda x: x.replace('\r',' '))
+
         list_tbl_f['REMARKS']=list_tbl_f['REMARKS'].fillna('na')
         list_tbl_f['REMARKS']=list_tbl_f['REMARKS'].apply(lambda x: x.replace('\r',' '))
         list_tbl_f['case_nos_b']=list_tbl_f['case_nos_b'].apply(lambda x:extract_case_no(x))
@@ -142,17 +144,8 @@ def createCaseTblListGroup(tbls):
                 tbl_list=[]
     group_list.append(tbl_list)
     return group_list
-# %%
-def main():
-    main_group=[]
-    temp_buff_group=[]
-    args=sys.argv[1:]
-    if len(args)!=2:
-        print("Invalid argument. Expected python parsepdf.py INPUTFILE.pdf OUTPUTFILE.csv")
-        return
-    in_file=args[0]
-    outfile=args[1]
-    tables=tabula.read_pdf(in_file,pages='all',lattice=True)
+def parseAndSave(infilename,outfilename):
+    tables=tabula.read_pdf(infilename,pages='all',lattice=True)
     bgroups=getBoardTypeTables(tables)
     #print(bgroups[1].to_markdown())
     #getBoardDetail(t[1])
@@ -165,7 +158,17 @@ def main():
             caselistdf=getBoardListDF(df,boardData['court_no'],boardData['board_type'],boardData['judges'])
             if len(caselistdf)>0:
                 parsed_tables.append(caselistdf.sort_values(by=['srno']))
-    pd.concat(parsed_tables).to_csv("parsed_data_1.csv")
+    pd.concat(parsed_tables).to_csv(outfilename)
+# %%
+def main():
+    args=sys.argv[1:]
+    if len(args)!=2:
+        print("Invalid argument. Expected python parsepdf.py INPUTFILE.pdf OUTPUTFILE.csv")
+        return
+    in_file=args[0]
+    outfile=args[1]
+    parseAndSave(in_file,outfile)
+
     # for tbl in tables:
     #     if isBoardTypeTable(tbl)==True:
     #         #print("boardtype")
@@ -199,9 +202,7 @@ def main():
 
 # import glob
 
-# txtfiles = []
-# for file in glob.glob("*.txt"):
-#     txtfiles.append(file)
+
 if __name__ == "__main__":
     main()
 #isBoardTypeTable(tables[3])
